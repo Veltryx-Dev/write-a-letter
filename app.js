@@ -361,22 +361,47 @@ function showView(name) {
 
 function renderHomeTemplates() {
   const grid = $('#home-templates');
-  grid.innerHTML = TEMPLATES.map((t) => `
-    <div class="template-card" data-template="${t.id}">
-      <div class="template-preview">
-        <div class="mini-letter" style="background:${t.sampleBg};color:${t.sampleColor}">
-          <div style="text-align:center;margin-bottom:3px;opacity:0.75">${t.ornament}</div>
-          <div style="font-style:italic;margin-bottom:3px">To: Someone special</div>
-          <div style="font-weight:600;margin-bottom:4px;font-size:0.58rem">A little note for you</div>
-          <div style="opacity:0.85">Every word carries a piece of my heart...</div>
+  const categories = [
+    { id: 'romantic', label: 'Romantic', icon: '💐' },
+    { id: 'classic', label: 'Classic', icon: '📜' },
+    { id: 'mood', label: 'Mood & Night', icon: '🌙' },
+    { id: 'soft', label: 'Soft & Pastel', icon: '🌸' },
+  ];
+  const byCat = {
+    romantic: ['bouquet', 'flower', 'blush', 'cherry'],
+    classic: ['wax', 'parchment'],
+    mood: ['midnight', 'ocean', 'sunset'],
+    soft: ['petals', 'lavender'],
+  };
+
+  let html = '';
+  categories.forEach((cat) => {
+    const ids = byCat[cat.id] || [];
+    const items = TEMPLATES.filter((t) => ids.includes(t.id));
+    if (!items.length) return;
+    html += `<div class="template-category">
+      <div class="category-label"><span>${cat.icon}</span> ${cat.label}</div>
+      <div class="template-grid category-grid">`;
+    items.forEach((t) => {
+      html += `
+      <div class="template-card" data-template="${t.id}">
+        <div class="template-preview">
+          <div class="mini-letter" style="background:${t.sampleBg};color:${t.sampleColor}">
+            <div style="text-align:center;margin-bottom:3px;opacity:0.75">${t.ornament}</div>
+            <div style="font-style:italic;margin-bottom:3px">To: Someone special</div>
+            <div style="font-weight:600;margin-bottom:4px;font-size:0.58rem">A little note for you</div>
+            <div style="opacity:0.85">Every word carries a piece of my heart...</div>
+          </div>
         </div>
-      </div>
-      <div class="template-info">
-        <h3>${t.name}</h3>
-        <p>${t.desc}</p>
-      </div>
-    </div>
-  `).join('');
+        <div class="template-info">
+          <h3>${t.name}</h3>
+          <p>${t.desc}</p>
+        </div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+  grid.innerHTML = html;
   grid.querySelectorAll('.template-card').forEach((card) => {
     card.addEventListener('click', () => {
       state.selectedTemplate = card.dataset.template;
