@@ -108,6 +108,8 @@
           </div>
 
           <div class="pane" id="step-write">
+            <p class="pane-label">Message templates <small style="color:var(--dim);font-weight:400">or write your own</small></p>
+            <div class="msg-templates" id="msg-templates"></div>
             <label class="field">
               <span>To</span>
               <input type="text" id="letter-to" placeholder="Their name" maxlength="40" autocomplete="off" />
@@ -181,19 +183,52 @@
     <section id="view-letter" class="panel">
       <div class="open-stage" id="open-stage">
         <p class="open-intro" id="open-intro">Someone sent you a letter</p>
-        <div class="envelope" id="envelope" role="button" tabindex="0" aria-label="Open letter">
-          <div class="env-glow"></div>
-          <div class="env-shadow"></div>
-          <div class="env-body">
-            <div class="env-back"></div>
-            <div class="env-paper-peek"></div>
-            <div class="env-flap" id="envelope-flap"></div>
+
+        <div class="env-scene" id="env-scene">
+          <div class="env-floor"></div>
+
+          <div class="envelope" id="envelope" role="button" tabindex="0" aria-label="Open letter">
+            <div class="env-glow"></div>
+            <div class="env-shadow"></div>
+
+            <!-- Back panel -->
+            <div class="env-layer env-back">
+              <div class="env-texture"></div>
+            </div>
+
+            <!-- Letter tucked inside (pulls out) -->
+            <div class="env-letter-slot" id="env-letter-slot">
+              <div class="env-letter-sheet">
+                <div class="env-letter-lines"></div>
+                <div class="env-letter-heart">♥</div>
+              </div>
+            </div>
+
+            <!-- Side folds -->
+            <div class="env-fold env-fold-l"></div>
+            <div class="env-fold env-fold-r"></div>
+
+            <!-- Top flap -->
+            <div class="env-flap" id="envelope-flap">
+              <div class="env-flap-inner"></div>
+            </div>
+
+            <!-- Front face -->
             <div class="env-front">
-              <div class="env-wax"><span>♥</span></div>
+              <div class="env-lace"></div>
+              <div class="env-address">
+                <span class="env-to-label" id="env-to-label">For you</span>
+              </div>
+              <div class="env-wax">
+                <div class="env-wax-ring"></div>
+                <span>♥</span>
+              </div>
               <p class="env-hint"><span class="env-hint-pulse"></span> Tap to open</p>
             </div>
           </div>
         </div>
+
+        <!-- Full letter after pull-out -->
         <div class="letter-reveal" id="letter-reveal">
           <div class="letter-card letter-view" id="letter-display"></div>
         </div>
