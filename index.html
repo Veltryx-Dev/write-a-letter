@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LoveLetter — Write with Heart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="ambient">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="particles" id="particles" aria-hidden="true"></div>
+
+  <nav class="nav">
+    <a href="#" class="logo" id="nav-logo">
+      <span class="logo-icon">💌</span>
+      <span class="logo-text">LoveLetter</span>
+    </a>
+    <div class="nav-actions">
+      <button class="btn btn-ghost" id="btn-my-letters"><span class="btn-text">My Letters</span></button>
+      <button class="btn btn-primary" id="btn-create">
+        <span class="btn-shine"></span>
+        <span class="btn-text">Create Letter</span>
+      </button>
+    </div>
+  </nav>
+
+  <div class="music-player" id="music-player">
+    <button class="music-toggle" id="music-toggle" title="Toggle music">
+      <span class="music-bars"><i></i><i></i><i></i><i></i></span>
+    </button>
+    <div class="music-info">
+      <span class="music-track-name" id="music-track-name">No music</span>
+      <span class="music-hint">Ambient</span>
+    </div>
+    <input type="range" class="music-volume" id="music-volume" min="0" max="1" step="0.05" value="0.35" />
+  </div>
+
+  <main id="app">
+    <!-- HOME -->
+    <section id="view-home" class="view active">
+      <div class="hero">
+        <p class="hero-eyebrow anim-fade-up">💌 Create · Customize · Share</p>
+        <h1 class="hero-title anim-fade-up delay-1">
+          Letters that<br /><span class="gradient-text">feel like love</span>
+        </h1>
+        <p class="hero-sub anim-fade-up delay-2">
+          Soft templates, ambient music, and a shareable link with QR —
+          made to feel intimate and beautiful.
+        </p>
+        <div class="hero-cta anim-fade-up delay-3">
+          <button class="btn btn-primary btn-lg" id="hero-create">
+            <span class="btn-shine"></span>
+            <span class="btn-text">Start Creating</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+          <button class="btn btn-ghost btn-lg" id="hero-templates"><span class="btn-text">Browse Templates</span></button>
+        </div>
+      </div>
+
+      <div class="section templates-section">
+        <div class="section-header anim-fade-up">
+          <h2>Choose a Style</h2>
+          <p>Soft, romantic templates for every mood.</p>
+        </div>
+        <div class="template-grid" id="home-templates"></div>
+      </div>
+
+      <div class="section features-section">
+        <div class="feature-card anim-fade-up">
+          <div class="feature-icon">✨</div>
+          <h3>Live Preview</h3>
+          <p>Watch your letter come alive as you write.</p>
+        </div>
+        <div class="feature-card anim-fade-up delay-1">
+          <div class="feature-icon">🎵</div>
+          <h3>Soft Music</h3>
+          <p>Piano, rain, strings — set the mood.</p>
+        </div>
+        <div class="feature-card anim-fade-up delay-2">
+          <div class="feature-icon">📱</div>
+          <h3>QR Share</h3>
+          <p>One scan opens your letter anywhere.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CREATE -->
+    <section id="view-create" class="view">
+      <div class="create-layout">
+        <div class="create-sidebar">
+          <div class="sidebar-header">
+            <button class="btn-back" id="btn-back-home">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              Back
+            </button>
+            <h2>Create Letter</h2>
+          </div>
+
+          <div class="steps">
+            <div class="step active" data-step="1"><span>1</span> Template</div>
+            <div class="step" data-step="2"><span>2</span> Style</div>
+            <div class="step" data-step="3"><span>3</span> Music</div>
+            <div class="step" data-step="4"><span>4</span> Write</div>
+          </div>
+
+          <div class="step-panel active" id="step-template">
+            <p class="step-label">Pick a letter style</p>
+            <div class="template-select-grid" id="template-select"></div>
+          </div>
+
+          <div class="step-panel" id="step-background">
+            <p class="step-label">Choose a background</p>
+            <div class="bg-select-grid" id="bg-select"></div>
+          </div>
+
+          <div class="step-panel" id="step-music">
+            <p class="step-label">Set the mood</p>
+            <div class="music-select-grid" id="music-select"></div>
+            <p class="music-note">Music plays while you write and when they open the letter.</p>
+          </div>
+
+          <div class="step-panel" id="step-write">
+            <div class="form-group">
+              <label for="letter-to">To</label>
+              <input type="text" id="letter-to" placeholder="Their name..." maxlength="40" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="letter-from">From</label>
+              <input type="text" id="letter-from" placeholder="Your name..." maxlength="40" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="letter-title">Title <span class="optional">(optional)</span></label>
+              <input type="text" id="letter-title" placeholder="A little note for you..." maxlength="60" autocomplete="off" />
+            </div>
+            <div class="form-group">
+              <label for="letter-body">Your letter</label>
+              <textarea id="letter-body" rows="8" placeholder="Write from the heart..."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="letter-date">Date</label>
+              <input type="text" id="letter-date" placeholder="October 20, 2026" autocomplete="off" />
+            </div>
+          </div>
+
+          <div class="step-nav">
+            <button class="btn btn-ghost" id="btn-prev-step" disabled><span class="btn-text">Previous</span></button>
+            <button class="btn btn-primary" id="btn-next-step">
+              <span class="btn-shine"></span>
+              <span class="btn-text">Next</span>
+            </button>
+            <button class="btn btn-primary" id="btn-generate" style="display:none">
+              <span class="btn-shine"></span>
+              <span class="btn-text">Generate Share Link</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="create-preview">
+          <div class="preview-header">
+            <span class="preview-label">Live Preview</span>
+            <button class="icon-btn" id="btn-fullscreen-preview" title="Fullscreen">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            </button>
+          </div>
+          <div class="preview-stage" id="preview-stage">
+            <div class="letter-card" id="letter-preview"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SHARE -->
+    <section id="view-share" class="view">
+      <div class="share-card">
+        <div class="share-success">
+          <div class="success-icon">💌</div>
+          <h2>Your letter is ready</h2>
+          <p>Scan the QR or copy the link to share.</p>
+        </div>
+
+        <div class="share-qr-wrap" id="share-qr-wrap">
+          <div class="qr-frame">
+            <img id="share-qr-img" alt="QR code" width="200" height="200" />
+            <div class="qr-center-badge" id="qr-center-badge">
+              <span class="qr-bear">🧸</span>
+            </div>
+          </div>
+          <p class="share-qr-hint">Scan to open with love</p>
+        </div>
+
+        <div class="share-link-box">
+          <input type="text" id="share-link-input" readonly />
+          <button class="btn btn-primary" id="btn-copy-link">
+            <span class="btn-shine"></span>
+            <span class="btn-text">Copy</span>
+          </button>
+        </div>
+        <div class="share-actions">
+          <button class="btn btn-ghost" id="btn-open-letter"><span class="btn-text">Open Letter</span></button>
+          <button class="btn btn-ghost" id="btn-download-qr"><span class="btn-text">Download QR</span></button>
+          <button class="btn btn-ghost" id="btn-create-another"><span class="btn-text">Create Another</span></button>
+        </div>
+        <p class="share-saved-note" id="share-saved-note">Saved · works on any device</p>
+      </div>
+      <div class="confetti" id="confetti" aria-hidden="true"></div>
+    </section>
+
+    <!-- OPEN LETTER — envelope animation -->
+    <section id="view-letter" class="view">
+      <div class="open-stage" id="open-stage">
+        <!-- Envelope -->
+        <div class="envelope" id="envelope">
+          <div class="envelope-back"></div>
+          <div class="envelope-flap" id="envelope-flap"></div>
+          <div class="envelope-front">
+            <div class="envelope-seal">💌</div>
+            <p class="envelope-hint">Tap to open</p>
+          </div>
+        </div>
+
+        <!-- Letter paper (slides out) -->
+        <div class="letter-reveal" id="letter-reveal">
+          <div class="letter-card letter-view" id="letter-display"></div>
+        </div>
+      </div>
+      <div class="letter-view-actions" id="letter-view-actions" style="opacity:0;pointer-events:none">
+        <button class="btn btn-ghost" id="btn-back-from-letter">← Back</button>
+      </div>
+    </section>
+
+    <!-- MY LETTERS -->
+    <section id="view-my-letters" class="view">
+      <div class="my-letters-header">
+        <button class="btn-back" id="btn-back-from-my">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+        <h2>My Letters</h2>
+      </div>
+      <div class="my-letters-grid" id="my-letters-list"></div>
+      <div class="empty-state" id="my-letters-empty" style="display:none">
+        <div class="empty-icon">💌</div>
+        <p>No letters yet. Create your first one.</p>
+        <button class="btn btn-primary" id="btn-empty-create">
+          <span class="btn-shine"></span>
+          <span class="btn-text">Create Letter</span>
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
