@@ -41,6 +41,46 @@ const MUSIC_TRACKS = [
   { id: 'strings', name: 'Warm Strings', desc: 'Soft strings', icon: '🎻' },
 ];
 
+
+const MESSAGE_TEMPLATES = [
+  {
+    id: 'sweet',
+    label: 'Sweet note',
+    title: 'Just thinking of you',
+    body: 'I hope this finds you with a soft smile.\n\nEvery time I think of you, the day feels a little brighter. Thank you for being you.',
+  },
+  {
+    id: 'miss',
+    label: 'I miss you',
+    title: 'Missing you',
+    body: 'Distance is hard, but my heart still finds its way to you.\n\nI miss your laugh, your voice, and the quiet moments in between. Until we meet again.',
+  },
+  {
+    id: 'love',
+    label: 'I love you',
+    title: 'With all my heart',
+    body: 'I love you — not only for who you are, but for who I am when I am with you.\n\nToday, tomorrow, and every day after.',
+  },
+  {
+    id: 'thanks',
+    label: 'Thank you',
+    title: 'Thank you',
+    body: 'Thank you for the kindness you give so freely.\n\nYou make ordinary days feel special. I am grateful for you.',
+  },
+  {
+    id: 'sorry',
+    label: "I'm sorry",
+    title: "I'm sorry",
+    body: 'I am truly sorry for the hurt I caused.\n\nYou mean more to me than my pride. I hope we can heal this together.',
+  },
+  {
+    id: 'blank',
+    label: 'Write my own',
+    title: '',
+    body: '',
+  },
+];
+
 const state = {
   currentStep: 1,
   selectedTemplate: 'bouquet',
@@ -401,6 +441,7 @@ function startCreate() {
   renderTemplateSelect();
   renderBackgroundSelect();
   renderMusicSelect();
+  renderMsgTemplates();
   setStep(1);
   updatePreview();
   showView('create');
@@ -409,28 +450,98 @@ function startCreate() {
 function prepareEnvelope(data) {
   state.envelopeOpened = false;
   renderLetterContent(data);
-  $('#envelope').classList.remove('opened');
-  $('#letter-reveal').classList.remove('revealed');
-  $('#letter-view-actions').classList.remove('visible');
-  $('#open-stage')?.classList.remove('is-open');
+
+  const envelope = $('#envelope');
+  const reveal = $('#letter-reveal');
+  const actions = $('#letter-view-actions');
+  const stage = $('#open-stage');
+  const scene = $('#env-scene');
   const intro = $('#open-intro');
+  const label = $('#env-to-label');
+
+  envelope?.classList.remove('opened', 'pulling');
+  reveal?.classList.remove('revealed');
+  actions?.classList.remove('visible');
+  stage?.classList.remove('is-open');
+  scene?.classList.remove('opening', 'done');
+
   if (intro) {
     const to = (data.to || '').trim();
     intro.textContent = to ? `A letter for ${to}` : 'Someone sent you a letter';
   }
+  if (label) {
+    const to = (data.to || '').trim();
+    label.textContent = to ? `For ${to}` : 'For you';
+  }
+
   if (data.music && data.music !== 'none') state.selectedMusic = data.music;
 }
 
 function openEnvelope() {
   if (state.envelopeOpened) return;
   state.envelopeOpened = true;
-  $('#open-stage')?.classList.add('is-open');
-  $('#envelope').classList.add('opened');
-  setTimeout(() => $('#letter-reveal').classList.add('revealed'), 400);
-  setTimeout(() => $('#letter-view-actions').classList.add('visible'), 1150);
+
+  const envelope = $('#envelope');
+  const reveal = $('#letter-reveal');
+  const actions = $('#letter-view-actions');
+  const stage = $('#open-stage');
+  const scene = $('#env-scene');
+
+  stage?.classList.add('is-open');
+  scene?.classList.add('opening');
+
+  // 1) Open flap
+  envelope?.classList.add('opened');
+
+  // 2) Pull letter sheet out of envelope
+  setTimeout(() => {
+    envelope?.classList.add('pulling');
+  }, 380);
+
+  // 3) Fade envelope scene, show full letter
+  setTimeout(() => {
+    scene?.classList.add('done');
+    reveal?.classList.add('revealed');
+  }, 950);
+
+  // 4) Show close button
+  setTimeout(() => {
+    actions?.classList.add('visible');
+  }, 1700);
+
+  // Soft music
   if (state.selectedMusic && state.selectedMusic !== 'none') {
-    setTimeout(() => { try { playAmbient(state.selectedMusic); } catch (_) {} }, 650);
+    setTimeout(() => {
+      try { playAmbient(state.selectedMusic); } catch (_) {}
+    }, 800);
   }
+}
+
+function renderMsgTemplates() {
+  const box = $('#msg-templates');
+  if (!box) return;
+  box.innerHTML = MESSAGE_TEMPLATES.map((m) =>
+    `<button type="button" class="msg-chip" data-msg="${m.id}">${m.label}</button>`
+  ).join('');
+  box.querySelectorAll('.msg-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      box.querySelectorAll('.msg-chip').forEach((c) => c.classList.remove('on'));
+      chip.classList.add('on');
+      const m = MESSAGE_TEMPLATES.find((x) => x.id === chip.dataset.msg);
+      if (!m) return;
+      if (m.id === 'blank') {
+        // keep current text, just focus body
+        $('#letter-body')?.focus();
+        return;
+      }
+      $('#letter-title').value = m.title;
+      $('#letter-body').value = m.body;
+      state.letter.title = m.title;
+      state.letter.body = m.body;
+      updatePreview();
+      showToast('Template applied — edit freely');
+    });
+  });
 }
 
 async function generateShareLink() {
