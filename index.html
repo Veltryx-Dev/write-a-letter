@@ -24,9 +24,46 @@
     </a>
     <div class="topbar-actions">
       <button type="button" class="btn btn-quiet" id="btn-my-letters">My Letters</button>
+      <button type="button" class="btn btn-quiet" id="btn-auth-open">Log in</button>
+      <div class="user-chip" id="user-chip" hidden>
+        <span class="user-avatar" id="user-avatar">U</span>
+        <span class="user-name" id="user-name"></span>
+        <button type="button" class="btn-text" id="btn-logout">Log out</button>
+      </div>
       <button type="button" class="btn btn-main" id="btn-create">Create</button>
     </div>
   </header>
+
+  <!-- AUTH MODAL -->
+  <div class="modal-overlay" id="auth-modal" hidden>
+    <div class="modal" role="dialog" aria-labelledby="auth-title">
+      <button type="button" class="modal-close" id="auth-close" aria-label="Close">×</button>
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab on" data-auth="login" id="tab-login">Log in</button>
+        <button type="button" class="auth-tab" data-auth="register" id="tab-register">Register</button>
+      </div>
+      <h2 class="modal-title" id="auth-title">Welcome back</h2>
+      <p class="modal-sub" id="auth-sub">Your letters stay private — only share links open them.</p>
+      <form id="auth-form" class="auth-form" autocomplete="on">
+        <label class="field" id="auth-name-field" hidden>
+          <span>Name</span>
+          <input type="text" id="auth-name" name="name" maxlength="60" placeholder="Your name" autocomplete="name" />
+        </label>
+        <label class="field">
+          <span>Email</span>
+          <input type="email" id="auth-email" name="email" required placeholder="you@email.com" autocomplete="email" />
+        </label>
+        <label class="field">
+          <span>Password</span>
+          <input type="password" id="auth-password" name="password" required minlength="6" placeholder="Min 6 characters" autocomplete="current-password" />
+        </label>
+        <p class="auth-error" id="auth-error" hidden></p>
+        <button type="submit" class="btn btn-main btn-lg auth-submit" id="auth-submit">Log in</button>
+      </form>
+      <p class="auth-hint">Letters are only readable with the share link. Your dashboard shows what you created.</p>
+    </div>
+  </div>
+
 
   <div class="music-dock" id="music-player">
     <button type="button" class="music-btn" id="music-toggle" title="Music">
@@ -157,21 +194,29 @@
         <div class="share-top">
           <span class="share-emoji">💌</span>
           <h2>Ready to share</h2>
-          <p>Scan the QR or copy the link</p>
+          <p>Pick a QR style · scan or copy the link</p>
         </div>
+
         <div class="qr-block" id="share-qr-wrap">
-          <div class="qr-shell">
-            <img id="share-qr-img" alt="QR code" width="200" height="200" />
-            <div class="qr-badge">🧸</div>
+          <div class="qr-shell qr-style-rose" id="qr-shell">
+            <div class="qr-frame">
+              <img id="share-qr-img" alt="QR code" width="200" height="200" />
+              <div class="qr-badge" id="qr-badge">🧸</div>
+            </div>
+            <p class="qr-caption" id="qr-caption">Rose · Soft pink</p>
           </div>
         </div>
+
+        <p class="pane-label share-qr-label">QR design</p>
+        <div class="qr-styles" id="qr-styles"></div>
+
         <div class="link-row">
           <input type="text" id="share-link-input" readonly />
           <button type="button" class="btn btn-main" id="btn-copy-link">Copy</button>
         </div>
         <div class="share-row">
           <button type="button" class="btn btn-quiet" id="btn-open-letter">Open</button>
-          <button type="button" class="btn btn-quiet" id="btn-download-qr">QR</button>
+          <button type="button" class="btn btn-quiet" id="btn-download-qr">Save QR</button>
           <button type="button" class="btn btn-quiet" id="btn-create-another">New</button>
         </div>
         <p class="share-note" id="share-saved-note"></p>
@@ -240,14 +285,27 @@
 
     <!-- MY LETTERS -->
     <section id="view-my-letters" class="panel">
-      <div class="page-head">
-        <button type="button" class="link-back" id="btn-back-from-my">← Back</button>
-        <h2>My Letters</h2>
-      </div>
-      <div class="letters-grid" id="my-letters-list"></div>
-      <div class="empty" id="my-letters-empty" hidden>
-        <p>No letters yet</p>
-        <button type="button" class="btn btn-main" id="btn-empty-create">Create one</button>
+      <div class="dash-page">
+        <div class="page-head">
+          <button type="button" class="link-back" id="btn-back-from-my">← Back</button>
+          <div class="page-head-row">
+            <div>
+              <h2>My Letters</h2>
+              <p class="page-sub" id="dash-sub">Private dashboard — only you see this list</p>
+            </div>
+            <button type="button" class="btn btn-main" id="btn-dash-create">New letter</button>
+          </div>
+        </div>
+        <div class="dash-stats" id="dash-stats" hidden>
+          <div class="stat"><strong id="stat-count">0</strong><span>Letters</span></div>
+          <div class="stat"><strong id="stat-views">0</strong><span>Total views</span></div>
+        </div>
+        <div class="letters-grid" id="my-letters-list"></div>
+        <div class="empty" id="my-letters-empty" hidden>
+          <p id="empty-msg">No letters yet</p>
+          <button type="button" class="btn btn-main" id="btn-empty-create">Create one</button>
+          <button type="button" class="btn btn-quiet" id="btn-empty-login" hidden>Log in to sync</button>
+        </div>
       </div>
     </section>
   </main>
