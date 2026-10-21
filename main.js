@@ -81,6 +81,18 @@ const MESSAGE_TEMPLATES = [
   },
 ];
 
+
+const QR_STYLES = [
+  { id: 'rose', name: 'Rose', badge: '🧸', fg: 'f43f5e', bg: 'ffffff', shell: 'qr-style-rose', caption: 'Rose · Soft pink' },
+  { id: 'classic', name: 'Classic', badge: '✦', fg: '18181b', bg: 'ffffff', shell: 'qr-style-classic', caption: 'Classic · Black & white' },
+  { id: 'midnight', name: 'Midnight', badge: '✧', fg: 'e0e7ff', bg: '1e1b4b', shell: 'qr-style-midnight', caption: 'Midnight · Indigo' },
+  { id: 'gold', name: 'Gold', badge: '❋', fg: 'b45309', bg: 'fffbeb', shell: 'qr-style-gold', caption: 'Gold · Warm amber' },
+  { id: 'sakura', name: 'Sakura', badge: '🌸', fg: 'db2777', bg: 'fdf2f8', shell: 'qr-style-sakura', caption: 'Sakura · Blossom' },
+  { id: 'ocean', name: 'Ocean', badge: '🌊', fg: '0e7490', bg: 'ecfeff', shell: 'qr-style-ocean', caption: 'Ocean · Soft teal' },
+  { id: 'ink', name: 'Ink', badge: '◆', fg: 'fafafa', bg: '18181b', shell: 'qr-style-ink', caption: 'Ink · Dark mode' },
+  { id: 'heart', name: 'Heart', badge: '♥', fg: 'be123c', bg: 'fff1f2', shell: 'qr-style-heart', caption: 'Heart · Bold rose' },
+];
+
 const state = {
   currentStep: 1,
   selectedTemplate: 'bouquet',
@@ -91,6 +103,12 @@ const state = {
   musicPlaying: false,
   apiOnline: false,
   envelopeOpened: false,
+  user: null,
+  token: localStorage.getItem('ll_token') || null,
+  authMode: 'login',
+  selectedQr: 'rose',
+  shareUrl: null,
+  shareId: null,
 };
 
 let audioCtx = null, masterGain = null, activeNodes = [];
@@ -233,15 +251,209 @@ async function checkApi() {
   return state.apiOnline;
 }
 
+function authHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (state.token) h['Authorization'] = 'Bearer ' + state.token;
+  return h;
+}
+
+function setSession(token, user) {
+  state.token = token;
+  state.user = user;
+  if (token) localStorage.setItem('ll_token', token);
+  else localStorage.removeItem('ll_token');
+  if (user) localStorage.setItem('ll_user', JSON.stringify(user));
+  else localStorage.removeItem('ll_user');
+  updateAuthUI();
+}
+
+function clearSession() {
+  setSession(null, null);
+  showToast('Logged out');
+}
+
+function updateAuthUI() {
+  const chip = $('#user-chip');
+  const openBtn = $('#btn-auth-open');
+  if (state.user) {
+    if (chip) chip.hidden = false;
+    if (openBtn) openBtn.hidden = true;
+    const name = state.user.name || state.user.email || 'You';
+    const nm = $('#user-name');
+    const av = $('#user-avatar');
+    if (nm) nm.textContent = name;
+    if (av) av.textContent = (name[0] || 'U').toUpperCase();
+  } else {
+    if (chip) chip.hidden = true;
+    if (openBtn) openBtn.hidden = false;
+  }
+}
+
+function openAuthModal(mode) {
+  state.authMode = mode || 'login';
+  const modal = $('#auth-modal');
+  if (!modal) return;
+  modal.hidden = false;
+  setAuthMode(state.authMode);
+  $('#auth-error').hidden = true;
+  $('#auth-password').value = '';
+}
+
+function closeAuthModal() {
+  const modal = $('#auth-modal');
+  if (modal) modal.hidden = true;
+}
+
+function setAuthMode(mode) {
+  state.authMode = mode;
+  const isReg = mode === 'register';
+  $$('.auth-tab').forEach((t) => t.classList.toggle('on', t.dataset.auth === mode));
+  const title = $('#auth-title');
+  const sub = $('#auth-sub');
+  const nameField = $('#auth-name-field');
+  const submit = $('#auth-submit');
+  const pw = $('#auth-password');
+  if (title) title.textContent = isReg ? 'Create account' : 'Welcome back';
+  if (sub) sub.textContent = isReg
+    ? 'Save letters to your private dashboard. Only share links open them.'
+    : 'Your letters stay private — only share links open them.';
+  if (nameField) nameField.hidden = !isReg;
+  if (submit) submit.textContent = isReg ? 'Register' : 'Log in';
+  if (pw) pw.autocomplete = isReg ? 'new-password' : 'current-password';
+}
+
+async function restoreSession() {
+  if (!state.token) {
+    try {
+      const u = JSON.parse(localStorage.getItem('ll_user') || 'null');
+      if (u) state.user = u;
+    } catch (_) {}
+    updateAuthUI();
+    return;
+  }
+  try {
+    const r = await fetch(API_BASE + '/api/auth/me', {
+      headers: authHeaders(),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!r.ok) throw new Error('bad');
+    const d = await r.json();
+    state.user = d.user;
+    localStorage.setItem('ll_user', JSON.stringify(d.user));
+  } catch (_) {
+    // keep local user hint if offline; clear bad token only on 401
+    state.token = null;
+    localStorage.removeItem('ll_token');
+  }
+  updateAuthUI();
+}
+
+async function submitAuth(e) {
+  e.preventDefault();
+  const email = $('#auth-email').value.trim();
+  const password = $('#auth-password').value;
+  const name = $('#auth-name')?.value.trim() || '';
+  const err = $('#auth-error');
+  err.hidden = true;
+  const btn = $('#auth-submit');
+  btn.disabled = true;
+  btn.textContent = 'Please wait…';
+
+  try {
+    await checkApi();
+    if (!state.apiOnline) throw new Error('Server offline — try again later');
+
+    const path = state.authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+    const body = state.authMode === 'register' ? { email, password, name } : { email, password };
+    const r = await fetch(API_BASE + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || 'Auth failed');
+
+    setSession(d.token, d.user);
+    closeAuthModal();
+    showToast(state.authMode === 'register' ? 'Account created' : 'Welcome back');
+  } catch (ex) {
+    err.textContent = ex.message || 'Something went wrong';
+    err.hidden = false;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = state.authMode === 'register' ? 'Register' : 'Log in';
+  }
+}
+
+
+
 async function apiCreate(payload) {
   const r = await fetch(API_BASE + '/api/letters', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: authHeaders(),
     body: JSON.stringify(payload),
   });
   if (!r.ok) throw new Error('save failed');
   return r.json();
 }
+
+async function apiMyLetters() {
+  const r = await fetch(API_BASE + '/api/letters?limit=50', {
+    headers: authHeaders(),
+  });
+  if (r.status === 401) return null;
+  if (!r.ok) throw new Error('list failed');
+  return r.json();
+}
+
+function renderQrStyles() {
+  const box = $('#qr-styles');
+  if (!box) return;
+  box.innerHTML = QR_STYLES.map((s) => `
+    <button type="button" class="qr-style-chip ${state.selectedQr === s.id ? 'on' : ''}" data-qr="${s.id}" title="${s.name}">
+      <div class="qr-style-swatch" style="--swatch-fg:#${s.fg};--swatch-bg:#${s.bg}"></div>
+      <span>${s.name}</span>
+    </button>
+  `).join('');
+  box.querySelectorAll('.qr-style-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      state.selectedQr = chip.dataset.qr;
+      renderQrStyles();
+      applyQrDesign();
+    });
+  });
+}
+
+function applyQrDesign() {
+  const style = QR_STYLES.find((s) => s.id === state.selectedQr) || QR_STYLES[0];
+  const shell = $('#qr-shell');
+  const badge = $('#qr-badge');
+  const caption = $('#qr-caption');
+  const img = $('#share-qr-img');
+
+  if (shell) {
+    shell.className = 'qr-shell ' + style.shell;
+  }
+  if (badge) badge.textContent = style.badge;
+  if (caption) caption.textContent = style.caption;
+
+  if (!state.shareUrl || !img) return;
+
+  // Prefer API with style, fallback to qrserver
+  if (state.apiOnline && state.shareId) {
+    img.src = API_BASE + '/api/qr/' + encodeURIComponent(state.shareId) + '?style=' + encodeURIComponent(style.id) + '&t=' + Date.now();
+  } else {
+    img.src =
+      'https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=12&color=' +
+      style.fg +
+      '&bgcolor=' +
+      style.bg +
+      '&data=' +
+      encodeURIComponent(state.shareUrl);
+  }
+}
+
+
 
 async function apiGet(id) {
   const r = await fetch(API_BASE + '/api/letters/' + encodeURIComponent(id));
@@ -580,21 +792,27 @@ async function generateShareLink() {
   } else saveLocal(shortId, payload);
 
   state.lastShareId = shortId;
+  state.shareId = shortId;
   const base = location.origin + (location.pathname.replace(/\/$/, '') || '');
   const url = `${base}/?letter=${shortId}`;
+  state.shareUrl = url;
   $('#share-link-input').value = url;
 
-  const qr = $('#share-qr-img');
-  if (cloud && state.apiOnline) {
-    qr.src = API_BASE + '/api/qr/' + encodeURIComponent(shortId);
-  } else {
-    qr.src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=f43f5e&bgcolor=ffffff&data=' + encodeURIComponent(url);
-  }
+  renderQrStyles();
+  applyQrDesign();
 
   const note = $('#share-saved-note');
   if (note) {
-    note.textContent = cloud ? 'Saved · works on any device' : 'Saved on this device';
-    note.style.color = cloud ? 'var(--mint)' : 'var(--dim)';
+    if (cloud && state.user) {
+      note.textContent = 'Saved to your account · only the share link opens it';
+      note.style.color = 'var(--mint)';
+    } else if (cloud) {
+      note.textContent = 'Saved · share link works anywhere · log in to keep in dashboard';
+      note.style.color = 'var(--mint)';
+    } else {
+      note.textContent = 'Saved on this device only';
+      note.style.color = 'var(--dim)';
+    }
   }
 
   btn.disabled = false;
@@ -604,28 +822,101 @@ async function generateShareLink() {
   showToast(cloud ? 'Link ready' : 'Link ready (local)');
 }
 
-function renderMyLetters() {
-  const all = allLocal();
-  const ids = Object.keys(all).sort((a, b) => (all[b].createdAt || 0) - (all[a].createdAt || 0));
+async function renderMyLetters() {
   const list = $('#my-letters-list');
   const empty = $('#my-letters-empty');
-  if (!ids.length) {
+  const stats = $('#dash-stats');
+  const emptyLogin = $('#btn-empty-login');
+  const emptyMsg = $('#empty-msg');
+  const dashSub = $('#dash-sub');
+
+  list.innerHTML = '<p style="color:var(--dim);font-size:0.9rem">Loading…</p>';
+  empty.hidden = true;
+
+  let items = [];
+  let fromCloud = false;
+
+  if (state.token && state.apiOnline !== false) {
+    try {
+      await checkApi();
+      if (state.apiOnline) {
+        const cloud = await apiMyLetters();
+        if (cloud) {
+          items = cloud;
+          fromCloud = true;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Fallback: local letters (device only)
+  if (!fromCloud) {
+    const all = allLocal();
+    items = Object.keys(all)
+      .map((id) => ({ shortId: id, ...all[id] }))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+
+  if (dashSub) {
+    dashSub.textContent = state.user
+      ? `Signed in as ${state.user.email} · only you see this list`
+      : 'Log in to sync across devices · share links still work for anyone';
+  }
+
+  if (!items.length) {
     list.innerHTML = '';
     empty.hidden = false;
+    if (stats) stats.hidden = true;
+    if (emptyMsg) emptyMsg.textContent = state.user ? 'No letters yet' : 'No letters on this device';
+    if (emptyLogin) emptyLogin.hidden = !!state.user;
     return;
   }
+
   empty.hidden = true;
-  list.innerHTML = ids.map((id, i) => {
-    const l = all[id];
+  if (emptyLogin) emptyLogin.hidden = true;
+
+  const totalViews = items.reduce((s, x) => s + (x.views || 0), 0);
+  if (stats) {
+    stats.hidden = false;
+    $('#stat-count').textContent = String(items.length);
+    $('#stat-views').textContent = String(totalViews);
+  }
+
+  list.innerHTML = items.map((l, i) => {
+    const id = l.shortId || l.id;
     const tpl = TEMPLATES.find((t) => t.id === l.template);
-    return `<div class="letter-item" data-id="${id}" style="animation-delay:${i * 0.04}s">
+    const dateStr = l.date || (l.createdAt ? new Date(l.createdAt).toLocaleDateString() : '');
+    return `<div class="letter-item" data-id="${id}" style="animation-delay:${(i * 0.04).toFixed(2)}s">
+      <span class="badge">${fromCloud ? 'Private · link only' : 'This device'}</span>
       <h3>${escapeHtml(l.title || l.to || 'Untitled')}</h3>
       <p>To: ${escapeHtml(l.to || '—')} · ${tpl ? tpl.name : ''}</p>
-      <div class="meta"><span>${escapeHtml(l.date || '')}</span><span style="color:var(--rose)">Open →</span></div>
+      <div class="meta"><span>${escapeHtml(String(dateStr))}</span><span>${l.views != null ? l.views + ' views' : ''}</span></div>
+      <div class="item-actions">
+        <button type="button" class="btn btn-quiet btn-open-item" data-id="${id}">Open</button>
+        <button type="button" class="btn btn-quiet btn-copy-item" data-id="${id}">Copy link</button>
+      </div>
     </div>`;
   }).join('');
+
+  list.querySelectorAll('.btn-open-item').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openLetterById(btn.dataset.id);
+    });
+  });
+  list.querySelectorAll('.btn-copy-item').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const base = location.origin + (location.pathname.replace(/\/$/, '') || '');
+      const url = `${base}/?letter=${btn.dataset.id}`;
+      navigator.clipboard.writeText(url).then(() => showToast('Link copied')).catch(() => showToast(url));
+    });
+  });
   list.querySelectorAll('.letter-item').forEach((el) => {
-    el.addEventListener('click', () => openLetterById(el.dataset.id));
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      openLetterById(el.dataset.id);
+    });
   });
 }
 
@@ -662,7 +953,7 @@ async function handleUrl() {
 function bind() {
   $('#nav-logo').addEventListener('click', (e) => { e.preventDefault(); showView('home'); });
   $('#btn-create').addEventListener('click', () => startCreate());
-  $('#btn-my-letters').addEventListener('click', () => { renderMyLetters(); showView('my-letters'); });
+  $('#btn-my-letters').addEventListener('click', async () => { showView('my-letters'); await renderMyLetters(); });
   $('#hero-create').addEventListener('click', () => startCreate());
   $('#hero-templates').addEventListener('click', () => {
     $('#templates-anchor')?.scrollIntoView({ behavior: 'smooth' });
@@ -710,6 +1001,21 @@ function bind() {
     if (masterGain && audioCtx) masterGain.gain.setValueAtTime(parseFloat(e.target.value), audioCtx.currentTime);
   });
 
+
+  $('#btn-auth-open')?.addEventListener('click', () => openAuthModal('login'));
+  $('#auth-close')?.addEventListener('click', closeAuthModal);
+  $('#auth-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'auth-modal') closeAuthModal();
+  });
+  $$('.auth-tab').forEach((t) => t.addEventListener('click', () => setAuthMode(t.dataset.auth)));
+  $('#auth-form')?.addEventListener('submit', submitAuth);
+  $('#btn-logout')?.addEventListener('click', () => {
+    clearSession();
+    renderMyLetters();
+  });
+  $('#btn-dash-create')?.addEventListener('click', () => startCreate());
+  $('#btn-empty-login')?.addEventListener('click', () => openAuthModal('login'));
+
   const env = $('#envelope');
   env?.addEventListener('click', openEnvelope);
   env?.addEventListener('keydown', (e) => {
@@ -722,6 +1028,7 @@ async function init() {
   renderHomeTemplates();
   bind();
   await checkApi();
+  await restoreSession();
   if (!(await handleUrl())) showView('home');
 }
 
