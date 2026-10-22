@@ -124,14 +124,35 @@
 
           <nav class="pills" id="step-pills">
             <button type="button" class="pill active" data-step="1">Style</button>
-            <button type="button" class="pill" data-step="2">Scene</button>
-            <button type="button" class="pill" data-step="3">Music</button>
-            <button type="button" class="pill" data-step="4">Write</button>
+            <button type="button" class="pill" data-step="2">Reveal</button>
+            <button type="button" class="pill" data-step="3">Scene</button>
+            <button type="button" class="pill" data-step="4">Music</button>
+            <button type="button" class="pill" data-step="5">Write</button>
           </nav>
 
           <div class="pane active" id="step-template">
-            <p class="pane-label">Choose a style</p>
+            <p class="pane-label">Letter paper style</p>
             <div class="pick-grid" id="template-select"></div>
+          </div>
+
+          <div class="pane" id="step-reveal">
+            <p class="pane-label">How they open it</p>
+            <div class="reveal-picks" id="reveal-select">
+              <button type="button" class="reveal-card on" data-reveal="envelope">
+                <div class="reveal-preview reveal-prev-env">
+                  <span class="rp-env">💌</span>
+                </div>
+                <strong>Envelope</strong>
+                <span>Flap opens · letter slides out</span>
+              </button>
+              <button type="button" class="reveal-card" data-reveal="luckybox">
+                <div class="reveal-preview reveal-prev-box">
+                  <span class="rp-box">🎁</span>
+                </div>
+                <strong>Lucky Box</strong>
+                <span>Tap the box · surprise pop</span>
+              </button>
+            </div>
           </div>
 
           <div class="pane" id="step-background">
@@ -198,16 +219,22 @@
         </div>
 
         <div class="qr-block" id="share-qr-wrap">
-          <div class="qr-shell qr-style-rose" id="qr-shell">
-            <div class="qr-frame">
+          <div class="qr-shell frame-rose" id="qr-shell">
+            <div class="qr-deco qr-deco-tl" aria-hidden="true"></div>
+            <div class="qr-deco qr-deco-tr" aria-hidden="true"></div>
+            <div class="qr-deco qr-deco-bl" aria-hidden="true"></div>
+            <div class="qr-deco qr-deco-br" aria-hidden="true"></div>
+            <div class="qr-deco-top" id="qr-deco-top" aria-hidden="true"></div>
+            <div class="qr-deco-bottom" id="qr-deco-bottom" aria-hidden="true"></div>
+            <div class="qr-frame" id="qr-frame">
               <img id="share-qr-img" alt="QR code" width="200" height="200" />
-              <div class="qr-badge" id="qr-badge">🧸</div>
+              <div class="qr-badge" id="qr-badge">♥</div>
             </div>
-            <p class="qr-caption" id="qr-caption">Rose · Soft pink</p>
+            <p class="qr-caption" id="qr-caption">Rose Love</p>
           </div>
         </div>
 
-        <p class="pane-label share-qr-label">QR design</p>
+        <p class="pane-label share-qr-label">Custom frames</p>
         <div class="qr-styles" id="qr-styles"></div>
 
         <div class="link-row">
@@ -273,7 +300,22 @@
           </div>
         </div>
 
-        <!-- Full letter after pull-out -->
+        <!-- LUCKY BOX -->
+        <div class="lucky-scene" id="lucky-scene" hidden>
+          <div class="lucky-wrap" id="lucky-wrap">
+            <label class="lucky-button" id="lucky-button">
+              <button type="button" id="lucky-hit" aria-label="Open lucky box"></button>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </label>
+            <p class="lucky-hint" id="lucky-hint">Tap the box</p>
+            <p class="lucky-to" id="lucky-to">For you</p>
+          </div>
+        </div>
+
+        <!-- Full letter after reveal -->
         <div class="letter-reveal" id="letter-reveal">
           <div class="letter-card letter-view" id="letter-display"></div>
         </div>
