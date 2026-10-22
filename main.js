@@ -82,20 +82,31 @@ const MESSAGE_TEMPLATES = [
 ];
 
 
+
 const QR_STYLES = [
-  { id: 'rose', name: 'Rose', badge: '🧸', fg: 'f43f5e', bg: 'ffffff', shell: 'qr-style-rose', caption: 'Rose · Soft pink' },
-  { id: 'classic', name: 'Classic', badge: '✦', fg: '18181b', bg: 'ffffff', shell: 'qr-style-classic', caption: 'Classic · Black & white' },
-  { id: 'midnight', name: 'Midnight', badge: '✧', fg: 'e0e7ff', bg: '1e1b4b', shell: 'qr-style-midnight', caption: 'Midnight · Indigo' },
-  { id: 'gold', name: 'Gold', badge: '❋', fg: 'b45309', bg: 'fffbeb', shell: 'qr-style-gold', caption: 'Gold · Warm amber' },
-  { id: 'sakura', name: 'Sakura', badge: '🌸', fg: 'db2777', bg: 'fdf2f8', shell: 'qr-style-sakura', caption: 'Sakura · Blossom' },
-  { id: 'ocean', name: 'Ocean', badge: '🌊', fg: '0e7490', bg: 'ecfeff', shell: 'qr-style-ocean', caption: 'Ocean · Soft teal' },
-  { id: 'ink', name: 'Ink', badge: '◆', fg: 'fafafa', bg: '18181b', shell: 'qr-style-ink', caption: 'Ink · Dark mode' },
-  { id: 'heart', name: 'Heart', badge: '♥', fg: 'be123c', bg: 'fff1f2', shell: 'qr-style-heart', caption: 'Heart · Bold rose' },
+  { id: 'rose', name: 'Rose', badge: '♥', fg: 'e11d48', bg: 'ffffff', shell: 'frame-rose', caption: 'Rose Love', icon: '🌹' },
+  { id: 'heart', name: 'Heart', badge: '♡', fg: 'be123c', bg: 'fff1f2', shell: 'frame-heart', caption: 'Heart Frame', icon: '❤️' },
+  { id: 'floral', name: 'Floral', badge: '❀', fg: 'db2777', bg: 'fdf2f8', shell: 'frame-floral', caption: 'Floral Bloom', icon: '🌸' },
+  { id: 'envelope', name: 'Envelope', badge: '💌', fg: 'e11d48', bg: 'fff7ed', shell: 'frame-envelope', caption: 'Love Letter', icon: '✉️' },
+  { id: 'anniversary', name: 'Anniversary', badge: '✦', fg: 'c026d3', bg: 'fdf4ff', shell: 'frame-anniversary', caption: 'Happy Anniversary', icon: '💍' },
+  { id: 'birthday', name: 'Birthday', badge: '🎂', fg: 'ea580c', bg: 'fff7ed', shell: 'frame-birthday', caption: 'Happy Birthday', icon: '🎈' },
+  { id: 'sakura', name: 'Sakura', badge: '🌸', fg: 'db2777', bg: 'fce7f3', shell: 'frame-sakura', caption: 'Sakura', icon: '🌷' },
+  { id: 'scanme', name: 'Scan Me', badge: '◆', fg: '18181b', bg: 'ffffff', shell: 'frame-scanme', caption: 'Scan Me', icon: '⬛' },
+  { id: 'pastel', name: 'Pastel', badge: '✧', fg: '7c3aed', bg: 'f5f3ff', shell: 'frame-pastel', caption: 'Soft Pastel', icon: '🎨' },
+  { id: 'gold', name: 'Gold', badge: '❋', fg: 'b45309', bg: 'fffbeb', shell: 'frame-gold', caption: 'Golden', icon: '✨' },
+  { id: 'ocean', name: 'Ocean', badge: '🌊', fg: '0e7490', bg: 'ecfeff', shell: 'frame-ocean', caption: 'Ocean', icon: '🌊' },
+  { id: 'midnight', name: 'Midnight', badge: '✦', fg: 'e0e7ff', bg: '1e1b4b', shell: 'frame-midnight', caption: 'Midnight', icon: '🌙' },
+  { id: 'gift', name: 'Gift', badge: '🎀', fg: 'be123c', bg: 'fff1f2', shell: 'frame-gift', caption: 'Gift Box', icon: '🎁' },
+  { id: 'rainbow', name: 'Rainbow', badge: '✦', fg: '7c3aed', bg: 'ffffff', shell: 'frame-rainbow', caption: 'Rainbow', icon: '🌈' },
+  { id: 'classic', name: 'Classic', badge: '●', fg: '18181b', bg: 'ffffff', shell: 'frame-classic', caption: 'Classic', icon: '⬜' },
+  { id: 'ink', name: 'Ink', badge: '◆', fg: 'fafafa', bg: '18181b', shell: 'frame-ink', caption: 'Dark Ink', icon: '⬛' },
 ];
+
 
 const state = {
   currentStep: 1,
   selectedTemplate: 'bouquet',
+  selectedReveal: 'envelope',
   selectedBackground: 'blush',
   selectedMusic: 'none',
   letter: { to: '', from: '', title: '', body: '', date: '' },
@@ -244,10 +255,23 @@ function toggleMusic() {
 
 async function checkApi() {
   try {
-    const r = await fetch(API_BASE + '/api/health', { signal: AbortSignal.timeout(3000) });
-    const d = await r.json();
-    state.apiOnline = !!(d && d.ok);
-  } catch { state.apiOnline = false; }
+    const r = await fetch(API_BASE + '/api/health', {
+      method: 'GET',
+      cache: 'no-store',
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!r.ok) {
+      state.apiOnline = false;
+      return false;
+    }
+    const d = await r.json().catch(() => ({}));
+    state.apiOnline = d.ok !== false;
+    state.dbOnline = !!d.db;
+  } catch (e) {
+    console.warn('health check failed', e);
+    state.apiOnline = false;
+    state.dbOnline = false;
+  }
   return state.apiOnline;
 }
 
@@ -360,19 +384,36 @@ async function submitAuth(e) {
   btn.textContent = 'Please wait…';
 
   try {
-    await checkApi();
-    if (!state.apiOnline) throw new Error('Server offline — try again later');
+    if (!email || !password) throw new Error('Email and password required');
+    if (state.authMode === 'register' && password.length < 6) {
+      throw new Error('Password must be at least 6 characters');
+    }
 
     const path = state.authMode === 'register' ? '/api/auth/register' : '/api/auth/login';
     const body = state.authMode === 'register' ? { email, password, name } : { email, password };
-    const r = await fetch(API_BASE + path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const d = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(d.error || 'Auth failed');
 
+    let r;
+    try {
+      r = await fetch(API_BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(20000),
+      });
+    } catch (netErr) {
+      console.error(netErr);
+      throw new Error(
+        'Cannot reach /api/auth. Redeploy API + set MONGODB_URI. Atlas Network Access must allow 0.0.0.0/0'
+      );
+    }
+
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      throw new Error(d.error || d.detail || ('Auth failed (' + r.status + ')'));
+    }
+    if (!d.token || !d.user) throw new Error('Invalid server response');
+
+    state.apiOnline = true;
     setSession(d.token, d.user);
     closeAuthModal();
     showToast(state.authMode === 'register' ? 'Account created' : 'Welcome back');
@@ -388,13 +429,20 @@ async function submitAuth(e) {
 
 
 async function apiCreate(payload) {
-  const r = await fetch(API_BASE + '/api/letters', {
-    method: 'POST',
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-  });
-  if (!r.ok) throw new Error('save failed');
-  return r.json();
+  let r;
+  try {
+    r = await fetch(API_BASE + '/api/letters', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(25000),
+    });
+  } catch (e) {
+    throw new Error('Cannot reach API — check deploy and MONGODB_URI');
+  }
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || ('save failed ' + r.status));
+  return d;
 }
 
 async function apiMyLetters() {
@@ -411,7 +459,9 @@ function renderQrStyles() {
   if (!box) return;
   box.innerHTML = QR_STYLES.map((s) => `
     <button type="button" class="qr-style-chip ${state.selectedQr === s.id ? 'on' : ''}" data-qr="${s.id}" title="${s.name}">
-      <div class="qr-style-swatch" style="--swatch-fg:#${s.fg};--swatch-bg:#${s.bg}"></div>
+      <div class="qr-mini-frame ${s.shell}">
+        <span class="qr-mini-icon">${s.icon || '▦'}</span>
+      </div>
       <span>${s.name}</span>
     </button>
   `).join('');
@@ -456,9 +506,21 @@ function applyQrDesign() {
 
 
 async function apiGet(id) {
-  const r = await fetch(API_BASE + '/api/letters/' + encodeURIComponent(id));
-  if (!r.ok) return null;
-  return r.json();
+  try {
+    const r = await fetch(API_BASE + '/api/letters/' + encodeURIComponent(id), {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
+    });
+    if (r.status === 404) return null;
+    if (!r.ok) {
+      console.warn('apiGet status', r.status);
+      return null;
+    }
+    return await r.json();
+  } catch (e) {
+    console.warn('apiGet failed', e);
+    return null;
+  }
 }
 
 function showView(name) {
@@ -636,11 +698,26 @@ function setStep(n) {
     else if (s < n) p.classList.add('done');
   });
   $$('.pane').forEach((p) => p.classList.remove('active'));
-  const map = { 1: 'step-template', 2: 'step-background', 3: 'step-music', 4: 'step-write' };
+  const map = {
+    1: 'step-template',
+    2: 'step-reveal',
+    3: 'step-background',
+    4: 'step-music',
+    5: 'step-write',
+  };
   $(`#${map[n]}`)?.classList.add('active');
   $('#btn-prev-step').disabled = n === 1;
-  $('#btn-next-step').hidden = n === 4;
-  $('#btn-generate').hidden = n !== 4;
+  $('#btn-next-step').hidden = n === 5;
+  $('#btn-generate').hidden = n !== 5;
+}
+
+function bindRevealSelect() {
+  $$('#reveal-select .reveal-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      state.selectedReveal = card.dataset.reveal || 'envelope';
+      $$('#reveal-select .reveal-card').forEach((c) => c.classList.toggle('on', c === card));
+    });
+  });
 }
 
 function startCreate() {
@@ -654,6 +731,10 @@ function startCreate() {
   renderBackgroundSelect();
   renderMusicSelect();
   renderMsgTemplates();
+  bindRevealSelect();
+  document.querySelectorAll('#reveal-select .reveal-card').forEach((c) => {
+    c.classList.toggle('on', c.dataset.reveal === (state.selectedReveal || 'envelope'));
+  });
   setStep(1);
   updatePreview();
   showView('create');
@@ -663,27 +744,41 @@ function prepareEnvelope(data) {
   state.envelopeOpened = false;
   renderLetterContent(data);
 
+  const revealMode = data.reveal || 'envelope';
+  state._openReveal = revealMode;
+
   const envelope = $('#envelope');
   const reveal = $('#letter-reveal');
   const actions = $('#letter-view-actions');
   const stage = $('#open-stage');
   const scene = $('#env-scene');
+  const lucky = $('#lucky-scene');
   const intro = $('#open-intro');
   const label = $('#env-to-label');
+  const luckyTo = $('#lucky-to');
+  const luckyBtn = $('#lucky-button');
 
   envelope?.classList.remove('opened', 'pulling');
   reveal?.classList.remove('revealed');
   actions?.classList.remove('visible');
   stage?.classList.remove('is-open');
   scene?.classList.remove('opening', 'done');
+  lucky?.classList.remove('done');
+  luckyBtn?.classList.remove('opened');
 
+  const to = (data.to || '').trim();
   if (intro) {
-    const to = (data.to || '').trim();
     intro.textContent = to ? `A letter for ${to}` : 'Someone sent you a letter';
   }
-  if (label) {
-    const to = (data.to || '').trim();
-    label.textContent = to ? `For ${to}` : 'For you';
+  if (label) label.textContent = to ? `For ${to}` : 'For you';
+  if (luckyTo) luckyTo.textContent = to ? `For ${to}` : 'For you';
+
+  if (revealMode === 'luckybox') {
+    if (scene) scene.hidden = true;
+    if (lucky) lucky.hidden = false;
+  } else {
+    if (scene) scene.hidden = false;
+    if (lucky) lucky.hidden = true;
   }
 
   if (data.music && data.music !== 'none') state.selectedMusic = data.music;
@@ -691,6 +786,10 @@ function prepareEnvelope(data) {
 
 function openEnvelope() {
   if (state.envelopeOpened) return;
+  if (state._openReveal === 'luckybox') {
+    openLuckyBox();
+    return;
+  }
   state.envelopeOpened = true;
 
   const envelope = $('#envelope');
@@ -701,31 +800,45 @@ function openEnvelope() {
 
   stage?.classList.add('is-open');
   scene?.classList.add('opening');
-
-  // 1) Open flap
   envelope?.classList.add('opened');
 
-  // 2) Pull letter sheet out of envelope
-  setTimeout(() => {
-    envelope?.classList.add('pulling');
-  }, 380);
-
-  // 3) Fade envelope scene, show full letter
+  setTimeout(() => envelope?.classList.add('pulling'), 380);
   setTimeout(() => {
     scene?.classList.add('done');
     reveal?.classList.add('revealed');
   }, 950);
+  setTimeout(() => actions?.classList.add('visible'), 1700);
 
-  // 4) Show close button
-  setTimeout(() => {
-    actions?.classList.add('visible');
-  }, 1700);
-
-  // Soft music
   if (state.selectedMusic && state.selectedMusic !== 'none') {
-    setTimeout(() => {
-      try { playAmbient(state.selectedMusic); } catch (_) {}
-    }, 800);
+    setTimeout(() => { try { playAmbient(state.selectedMusic); } catch (_) {} }, 800);
+  }
+}
+
+function openLuckyBox() {
+  if (state.envelopeOpened) return;
+  state.envelopeOpened = true;
+
+  const stage = $('#open-stage');
+  const lucky = $('#lucky-scene');
+  const btn = $('#lucky-button');
+  const reveal = $('#letter-reveal');
+  const actions = $('#letter-view-actions');
+
+  stage?.classList.add('is-open');
+  btn?.classList.add('opened');
+
+  // confetti burst for box
+  try { burstConfetti(); } catch (_) {}
+
+  setTimeout(() => {
+    lucky?.classList.add('done');
+    reveal?.classList.add('revealed');
+  }, 480);
+
+  setTimeout(() => actions?.classList.add('visible'), 1200);
+
+  if (state.selectedMusic && state.selectedMusic !== 'none') {
+    setTimeout(() => { try { playAmbient(state.selectedMusic); } catch (_) {} }, 500);
   }
 }
 
@@ -762,6 +875,7 @@ async function generateShareLink() {
   }
   const payload = {
     template: state.selectedTemplate,
+    reveal: state.selectedReveal || 'envelope',
     background: state.selectedBackground,
     music: state.selectedMusic,
     to: state.letter.to,
@@ -778,13 +892,16 @@ async function generateShareLink() {
   let shortId = null;
   let cloud = false;
   try {
-    await checkApi();
-    if (state.apiOnline) {
-      const res = await apiCreate(payload);
+    const res = await apiCreate(payload);
+    if (res && (res.shortId || res.id)) {
       shortId = res.shortId || res.id;
       cloud = true;
+      state.apiOnline = true;
     }
-  } catch (_) {}
+  } catch (e) {
+    console.warn('cloud save failed', e);
+    state._lastSaveError = (e && e.message) || 'cloud save failed';
+  }
 
   if (!shortId) {
     shortId = generateId();
@@ -810,8 +927,8 @@ async function generateShareLink() {
       note.textContent = 'Saved · share link works anywhere · log in to keep in dashboard';
       note.style.color = 'var(--mint)';
     } else {
-      note.textContent = 'Saved on this device only';
-      note.style.color = 'var(--dim)';
+      note.textContent = 'Saved on this device only — will NOT open on other phones (fix MongoDB)';
+      note.style.color = '#fda4af';
     }
   }
 
@@ -921,13 +1038,16 @@ async function renderMyLetters() {
 }
 
 async function openLetterById(id) {
+  if (!id) return showToast('Letter not found');
+  showToast('Opening…');
   let data = null;
-  try {
-    await checkApi();
-    if (state.apiOnline) data = await apiGet(id);
-  } catch (_) {}
+  // Always try cloud first (don't depend on health check)
+  data = await apiGet(id);
+  if (data) state.apiOnline = true;
   if (!data) data = getLocal(id);
-  if (!data) return showToast('Letter not found');
+  if (!data) {
+    return showToast('Letter not found. It may only exist on the phone that created it.');
+  }
   prepareEnvelope(data);
   showView('letter');
 }
@@ -935,18 +1055,16 @@ async function openLetterById(id) {
 async function handleUrl() {
   const id = new URLSearchParams(location.search).get('letter');
   if (!id) return false;
-  let data = null;
-  try {
-    await checkApi();
-    if (state.apiOnline) data = await apiGet(id);
-  } catch (_) {}
+  let data = await apiGet(id);
+  if (data) state.apiOnline = true;
   if (!data) data = getLocal(id);
   if (data) {
     prepareEnvelope(data);
     showView('letter');
     return true;
   }
-  showToast('Letter not found');
+  showToast('Letter not found. Fix MongoDB so new links save to the cloud.');
+  showView('home');
   return false;
 }
 
@@ -968,7 +1086,7 @@ function bind() {
   $('#btn-empty-create').addEventListener('click', () => startCreate());
 
   $('#btn-prev-step').addEventListener('click', () => { if (state.currentStep > 1) setStep(state.currentStep - 1); });
-  $('#btn-next-step').addEventListener('click', () => { if (state.currentStep < 4) setStep(state.currentStep + 1); });
+  $('#btn-next-step').addEventListener('click', () => { if (state.currentStep < 5) setStep(state.currentStep + 1); });
   $('#btn-generate').addEventListener('click', generateShareLink);
 
   $$('.pill').forEach((p) => {
@@ -1018,6 +1136,14 @@ function bind() {
 
   const env = $('#envelope');
   env?.addEventListener('click', openEnvelope);
+  $('#lucky-hit')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openLuckyBox();
+  });
+  $('#lucky-button')?.addEventListener('click', (e) => {
+    if (e.target.id === 'lucky-hit') return;
+    openLuckyBox();
+  });
   env?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEnvelope(); }
   });
